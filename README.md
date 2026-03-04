@@ -13,8 +13,8 @@ Agent Orchestrator is an open-source system for running multiple AI coding agent
 **From a repo URL:**
 
 ```bash
-git clone https://github.com/ComposioHQ/agent-orchestrator.git
-cd agent-orchestrator && bash scripts/setup.sh
+git clone https://github.com/krishsharma1008/Orchestrator.git
+cd Orchestrator && bash scripts/setup.sh
 
 ao start https://github.com/your-org/your-repo
 ```
