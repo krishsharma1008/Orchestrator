@@ -1,110 +1,70 @@
-<h1 align="center">Agent Orchestrator — The Orchestration Layer for Parallel AI Agents</h1>
+# Agent Orchestrator
 
-<p align="center">
-<a href="https://platform.composio.dev/?utm_source=Github&utm_medium=Banner&utm_content=AgentOrchestrator">
-  <img width="800" alt="Agent Orchestrator banner" src="docs/assets/agent_orchestrator_banner.png">
-</a>
-</p>
+Agent Orchestrator is an open-source system for running multiple AI coding agents in parallel. Each agent gets its own git worktree, branch, and PR. The system handles CI failures and review comments automatically; you only get involved when human judgment is needed.
 
-<div align="center">
+**What it does:** You spawn agents (e.g. `ao spawn my-project 123`). Each agent works in isolation on a branch, opens a PR, and reacts to CI and review feedback. You supervise from one dashboard and step in when decisions are required.
 
-Spawn parallel AI coding agents, each in its own git worktree. Agents autonomously fix CI failures, address review comments, and open PRs — you supervise from one dashboard.
-
-[![GitHub stars](https://img.shields.io/github/stars/ComposioHQ/agent-orchestrator?style=flat-square)](https://github.com/ComposioHQ/agent-orchestrator/stargazers)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![PRs merged](https://img.shields.io/badge/PRs_merged-61-brightgreen?style=flat-square)](https://github.com/ComposioHQ/agent-orchestrator/pulls?q=is%3Amerged)
-[![Tests](https://img.shields.io/badge/test_cases-3%2C288-blue?style=flat-square)](https://github.com/ComposioHQ/agent-orchestrator/releases/tag/metrics-v1)
-
-</div>
+**Design:** Agent-agnostic (Claude Code, Codex, Aider), runtime-agnostic (tmux, Docker), and tracker-agnostic (GitHub, Linear). Built as a pluggable system—every piece (runtime, agent, workspace, tracker, notifier) is swappable.
 
 ---
 
-Agent Orchestrator manages fleets of AI coding agents working in parallel on your codebase. Each agent gets its own git worktree, its own branch, and its own PR. When CI fails, the agent fixes it. When reviewers leave comments, the agent addresses them. You only get pulled in when human judgment is needed.
-
-**Agent-agnostic** (Claude Code, Codex, Aider) · **Runtime-agnostic** (tmux, Docker) · **Tracker-agnostic** (GitHub, Linear)
-
-<div align="center">
-
-## See it in action
-
-<a href="https://x.com/agent_wrapper/status/2026329204405723180">
-  <img src="docs/assets/demo-video-tweet.png" alt="Agent Orchestrator demo — AI agents building their own orchestrator" width="560">
-</a>
-<br><br>
-<a href="https://x.com/agent_wrapper/status/2026329204405723180"><img src="docs/assets/btn-watch-demo.png" alt="Watch the Demo on X" height="48"></a>
-<br><br><br>
-<a href="https://x.com/agent_wrapper/status/2025986105485733945">
-  <img src="docs/assets/article-tweet.png" alt="The Self-Improving AI System That Built Itself" width="560">
-</a>
-<br><br>
-<a href="https://x.com/agent_wrapper/status/2025986105485733945"><img src="docs/assets/btn-read-article.png" alt="Read the Full Article on X" height="48"></a>
-
-</div>
-
 ## Quick Start
 
-**Option A — From a repo URL (fastest):**
+**From a repo URL:**
 
 ```bash
-# Install
 git clone https://github.com/ComposioHQ/agent-orchestrator.git
 cd agent-orchestrator && bash scripts/setup.sh
 
-# One command to clone, configure, and launch
 ao start https://github.com/your-org/your-repo
 ```
 
-Auto-detects language, package manager, SCM platform, and default branch. Generates `agent-orchestrator.yaml` and starts the dashboard + orchestrator.
-
-**Option B — From an existing local repo:**
+**From an existing local repo:**
 
 ```bash
 cd ~/your-project && ao init --auto
 ao start
 ```
 
-Then spawn agents:
+Spawn an agent:
 
 ```bash
-ao spawn my-project 123    # GitHub issue, Linear ticket, or ad-hoc
+ao spawn my-project 123    # issue/ticket number or ad-hoc
 ```
 
-Dashboard opens at `http://localhost:3000`. Run `ao status` for the CLI view.
+Dashboard: `http://localhost:3000`. CLI overview: `ao status`.
+
+---
 
 ## How It Works
 
-```
-ao spawn my-project 123
-```
+1. **Workspace** — Creates an isolated git worktree and feature branch.
+2. **Runtime** — Starts a tmux session (or Docker/process).
+3. **Agent** — Runs Claude Code, Codex, or Aider with issue context.
+4. Agent works autonomously: reads code, writes tests, opens PR.
+5. **Reactions** — Auto-handle CI failures and review comments.
+6. **Notifier** — Alerts you when your input is needed.
 
-1. **Workspace** creates an isolated git worktree with a feature branch
-2. **Runtime** starts a tmux session (or Docker container)
-3. **Agent** launches Claude Code (or Codex, or Aider) with issue context
-4. Agent works autonomously — reads code, writes tests, creates PR
-5. **Reactions** auto-handle CI failures and review comments
-6. **Notifier** pings you only when judgment is needed
+### Plugin Slots
 
-### Plugin Architecture
+| Slot     | Default     | Alternatives        |
+|----------|-------------|---------------------|
+| Runtime  | tmux        | docker, process     |
+| Agent    | claude-code | codex, aider        |
+| Workspace| worktree    | clone               |
+| Tracker  | github      | linear              |
+| Notifier | desktop     | slack, webhook      |
+| Terminal | iterm2      | web                 |
 
-Eight slots. Every abstraction is swappable.
+Interfaces live in `packages/core/src/types.ts`. A plugin implements one interface and exports a `PluginModule`.
 
-| Slot | Default | Alternatives |
-|------|---------|-------------|
-| Runtime | tmux | docker, k8s, process |
-| Agent | claude-code | codex, aider, opencode |
-| Workspace | worktree | clone |
-| Tracker | github | linear |
-| SCM | github | — |
-| Notifier | desktop | slack, composio, webhook |
-| Terminal | iterm2 | web |
-| Lifecycle | core | — |
-
-All interfaces defined in [`packages/core/src/types.ts`](packages/core/src/types.ts). A plugin implements one interface and exports a `PluginModule`. That's it.
+---
 
 ## Configuration
 
+Example `agent-orchestrator.yaml`:
+
 ```yaml
-# agent-orchestrator.yaml
 port: 3000
 
 defaults:
@@ -118,7 +78,6 @@ projects:
     repo: owner/my-app
     path: ~/my-app
     defaultBranch: main
-    sessionPrefix: app
 
 reactions:
   ci-failed:
@@ -128,67 +87,59 @@ reactions:
   changes-requested:
     auto: true
     action: send-to-agent
-    escalateAfter: 30m
   approved-and-green:
-    auto: false       # flip to true for auto-merge
+    auto: false
     action: notify
 ```
 
-CI fails → agent gets the logs and fixes it. Reviewer requests changes → agent addresses them. PR approved with green CI → you get a notification to merge.
+See `agent-orchestrator.yaml.example` for the full reference.
 
-See [`agent-orchestrator.yaml.example`](agent-orchestrator.yaml.example) for the full reference.
+---
 
 ## CLI
 
 ```bash
-ao status                              # Overview of all sessions
-ao spawn <project> [issue]             # Spawn an agent
-ao send <session> "Fix the tests"      # Send instructions
-ao session ls                          # List sessions
-ao session kill <session>              # Kill a session
-ao session restore <session>           # Revive a crashed agent
-ao dashboard                           # Open web dashboard
+ao status                    # Overview of all sessions
+ao spawn <project> [issue]   # Spawn an agent
+ao send <session> "..."      # Send instructions
+ao session ls                # List sessions
+ao session kill <session>    # Kill a session
+ao session restore <session> # Restore a crashed agent
+ao dashboard                 # Open web dashboard
 ```
 
-## Why Agent Orchestrator?
-
-Running one AI agent in a terminal is easy. Running 30 across different issues, branches, and PRs is a coordination problem.
-
-**Without orchestration**, you manually: create branches, start agents, check if they're stuck, read CI failures, forward review comments, track which PRs are ready to merge, clean up when done.
-
-**With Agent Orchestrator**, you: `ao spawn` and walk away. The system handles isolation, feedback routing, and status tracking. You review PRs and make decisions — the rest is automated.
+---
 
 ## Prerequisites
 
 - Node.js 20+
 - Git 2.25+
-- tmux (for default runtime)
-- `gh` CLI (for GitHub integration)
+- tmux (default runtime)
+- `gh` CLI (for GitHub)
+
+---
 
 ## Development
 
 ```bash
-pnpm install && pnpm build    # Install and build all packages
-pnpm test                      # Run tests (3,288 test cases)
-pnpm dev                       # Start web dashboard dev server
+pnpm install && pnpm build
+pnpm test
+pnpm dev    # Web dashboard
 ```
 
-See [CLAUDE.md](CLAUDE.md) for code conventions and architecture details.
+See [CLAUDE.md](CLAUDE.md) for architecture and conventions.
 
-## Documentation
+---
 
-| Doc | What it covers |
-|-----|---------------|
-| [Setup Guide](SETUP.md) | Detailed installation and configuration |
-| [Examples](examples/) | Config templates (GitHub, Linear, multi-project, auto-merge) |
-| [CLAUDE.md](CLAUDE.md) | Architecture, conventions, plugin pattern |
-| [Troubleshooting](TROUBLESHOOTING.md) | Common issues and fixes |
+## Docs
 
-## Contributing
+- [Setup Guide](SETUP.md)
+- [Examples](examples/) — Config templates
+- [CLAUDE.md](CLAUDE.md) — Plugin pattern and types
+- [Troubleshooting](TROUBLESHOOTING.md)
 
-Contributions welcome. The plugin system makes it straightforward to add support for new agents, runtimes, trackers, and notification channels. Every plugin is an implementation of a TypeScript interface — see [CLAUDE.md](CLAUDE.md) for the pattern.
+---
 
 ## License
 
 MIT
-# Orchestrator
